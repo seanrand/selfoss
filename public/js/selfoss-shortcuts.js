@@ -85,12 +85,7 @@ selfoss.shortcuts = {
     nextprev: function(direction, open) {
         if(typeof direction == "undefined" || (direction!="next" && direction!="prev"))
             direction = "next";
-       
-        // helper functions
-        var scroll = function(value) {
-            // scroll down (negative value) and up (positive value)
-            $('#content').scrollTop($('#content').scrollTop()+value);
-        } 
+
         // select current        
         var old = $('.entry.selected');
         
@@ -107,24 +102,22 @@ selfoss.shortcuts = {
                 return;
             }
             else {
-                current = old.prev().length==0 ? old : old.prev();
+                if (open && old.next().is('.stream-empty, .stream-more')) {
+                    current = old.has('.entry-content:hidden').length ? old : old.prev();
+                } else {
+                    current = old.prev().length==0 ? old : old.prev();
+                }
             }
         }
 
         // remove active
-        old.removeClass('selected');
         old.find('.entry-content').hide();
         old.find('.entry-toolbar').hide();
-        
-        if(current.length==0)
-            return;
 
-        current.addClass('selected');
-        
         // load more
-        if(current.hasClass('stream-more'))
-            current.click().removeClass('selected').prev().addClass('selected');
-        
+        if(current.hasClass('stream-more') && !current.hasClass('loading'))
+                current.click();
+
         // open?
         if(open) {
             var content = current.find('.entry-content');
@@ -140,33 +133,56 @@ selfoss.shortcuts = {
             if($('#config').data('auto_mark_as_read')=="1" && current.hasClass('unread'))
                 current.find('.entry-unread').click();
         }
-        
-        // scroll to element
-        selfoss.shortcuts.autoscroll(current);
+
+        selfoss.shortcuts.autoscroll(old, current);
+
+        if (!(current.hasClass('stream-more') || current.hasClass('stream-empty'))) {
+            old.removeClass('selected');
+            current.addClass('selected');
+        }
     },
     
     
     /**
      * autoscroll
      */
-    autoscroll: function(next) {
+    autoscroll: function(prev, next) {
         var viewportHeight = $(window).height();
         var viewportScrollTop = $(window).scrollTop();
-        
-        // scroll down
-        if(viewportScrollTop + viewportHeight < next.position().top + next.height() + 80) {
-            if(next.height() > viewportHeight) {
-                $(window).scrollTop(next.position().top);
-            } else {
-                var marginTop = (viewportHeight-next.height())/2;
-                var scrollTop = next.position().top-marginTop;
-                $(window).scrollTop(scrollTop);
+
+        if ($('body').hasClass('top_align_on_move')) {
+            // scroll the currently opened item to the top of the screen
+
+            var streamDiv = $('.stream-empty, .stream-more');
+            if(streamDiv.length == 1) {
+
+                // calculate and set height of streamDiv so that the item can scroll to the top
+                var padding = streamDiv.cssUnit('padding-top')[0] + $('#content').cssUnit('padding-bottom')[0];
+                var streamDivHeight = viewportHeight - streamDiv.position().top - padding;
+                if (next.hasClass('stream-empty') || next.hasClass('stream-more')) {
+                    streamDiv.height(streamDivHeight + prev.position().top);
+                    $(window).scrollTop(prev.position().top);
+                } else {
+                    streamDiv.height(streamDivHeight + next.position().top);
+                    $(window).scrollTop(next.position().top);
+                }
             }
-        }
-        
-        // scroll up
-        if(next.position().top <= viewportScrollTop) {
-            $(window).scrollTop(next.position().top);
+        } else {
+            // scroll down
+            if(viewportScrollTop + viewportHeight < next.position().top + next.height() + 80) {
+                if(next.height() > viewportHeight) {
+                    $(window).scrollTop(next.position().top);
+                } else {
+                    var marginTop = (viewportHeight-next.height())/2;
+                    var scrollTop = next.position().top-marginTop;
+                    $(window).scrollTop(scrollTop);
+                }
+            }
+
+            // scroll up
+            if(next.position().top <= viewportScrollTop) {
+                $(window).scrollTop(next.position().top);
+            }
         }
     },
     
@@ -182,4 +198,4 @@ selfoss.shortcuts = {
         var content = $('.entry-content').is(':visible');
             selfoss.shortcuts.nextprev(direction, content);
     }
-}
+};

@@ -210,8 +210,11 @@ class Index extends BaseController {
         if(strlen($itemsHtml)==0) {
             $itemsHtml = '<div class="stream-empty">'. \F3::get('lang_no_entries').'</div>';
         } else {
-            if($itemDao->hasMore())
+            if($itemDao->hasMore()) {
                 $itemsHtml .= '<div class="stream-more"><span>'. \F3::get('lang_more').'</span></div>';
+            } else {
+                $itemsHtml .= '<div class="stream-empty"></div>';
+            }
         }
         
         return $itemsHtml;
